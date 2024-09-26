@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import os
 import sys
 import subprocess
+import time
 
 def find_ffmpeg():
     """嘗試多種方法找到 FFmpeg"""
@@ -30,9 +31,7 @@ def find_ffmpeg():
     
     return None
 
-# ... [前面的代码保持不变] ...
-
-def download_media(url, format_choice, download_playlist=False):
+def download_media(url, format_choice, download_playlist=False, max_retries=3):
     ydl_opts = {
         'format': 'bestaudio/best' if format_choice == '2' else 'bestvideo+bestaudio/best',
         'outtmpl': '%(title)s.%(ext)s',
@@ -55,31 +54,42 @@ def download_media(url, format_choice, download_playlist=False):
         print("警告: 未找到 FFmpeg。將下載原始格式，無法進行格式轉換。")
         print("您可以從 https://ffmpeg.org/download.html 下載 FFmpeg 以啟用格式轉換功能。")
 
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-    except Exception as e:
-        print(f"下載過程中發生錯誤: {str(e)}")
+    for attempt in range(max_retries):
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            print("下載成功完成！")
+            return
+        except Exception as e:
+            print(f"下載嘗試 {attempt + 1}/{max_retries} 失敗: {str(e)}")
+            if attempt < max_retries - 1:
+                print("等待 5 秒後重試...")
+                time.sleep(5)
+            else:
+                print("達到最大重試次數，下載失敗。")
+                print("請檢查您的網絡連接，或稍後再試。")
+                print("如果問題持續存在，請考慮更新 yt-dlp:")
+                print("pip install --upgrade yt-dlp")
 
-# 使用示例
-video_url = input("請輸入要下載的視頻URL: ")
-format_choice = input("請選擇下載格式 (1: 視頻, 2: 音頻): ")
-download_playlist = input("是否下載整個播放列表？(y/n): ").lower() == 'y'
+def main():
+    video_url = input("請輸入要下載的視頻URL: ")
+    format_choice = input("請選擇下載格式 (1: 視頻, 2: 音頻): ")
+    download_playlist = input("是否下載整個播放列表？(y/n): ").lower() == 'y'
 
-start_time = datetime.now()
-print(f"開始下載時間: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    start_time = datetime.now()
+    print(f"開始下載時間: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-download_media(video_url, format_choice, download_playlist)
+    download_media(video_url, format_choice, download_playlist)
 
-# ... [后面的代码保持不变] ...
+    end_time = datetime.now()
+    print(f"下載完成時間: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-end_time = datetime.now()
-print(f"下載完成時間: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    duration = end_time - start_time
+    hours, remainder = divmod(duration.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
 
-duration = end_time - start_time
-hours, remainder = divmod(duration.seconds, 3600)
-minutes, seconds = divmod(remainder, 60)
+    print(f"媒體下載完成！總耗時: {hours}小時 {minutes}分鐘 {seconds}秒")
 
-print(f"媒體下載完成！總耗時: {hours}小時 {minutes}分鐘 {seconds}秒")
-
-input("按任意鍵退出...")
+if __name__ == "__main__":
+    main()
+    input("按任意鍵退出...")
