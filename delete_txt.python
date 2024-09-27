@@ -1,0 +1,43 @@
+import os
+import glob
+
+def process_file(input_file, output_file):
+    with open(input_file, 'r', encoding='utf-8') as infile:
+        lines = infile.readlines()
+
+    # 过滤掉以 "--" 或 "-m" 开头的行
+    filtered_lines = [line for line in lines if not (line.strip().startswith('--') or line.strip().startswith('-m'))]
+
+    # 计算删除的行数
+    removed_lines_count = len(lines) - len(filtered_lines)
+
+    with open(output_file, 'w', encoding='utf-8') as outfile:
+        outfile.writelines(filtered_lines)
+
+    return removed_lines_count
+
+def main():
+    # 获取当前目录下所有的 .txt 文件
+    txt_files = glob.glob('*.txt')
+
+    if not txt_files:
+        print("当前目录下没有找到 .txt 文件")
+        return
+
+    for txt_file in txt_files:
+        # 构造输出文件名
+        base_name = os.path.splitext(txt_file)[0]
+        output_file = f"{base_name}_processed.txt"
+
+        # 处理文件
+        removed_lines = process_file(txt_file, output_file)
+        
+        if removed_lines > 0:
+            print(f"处理完成: {txt_file} -> {output_file}")
+            print(f"删除了 {removed_lines} 行")
+        else:
+            print(f"处理完成: {txt_file} -> {output_file}")
+            print("文件内容没有变化")
+
+if __name__ == "__main__":
+    main()
