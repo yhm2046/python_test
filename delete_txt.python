@@ -5,8 +5,10 @@ def process_file(input_file, output_file):
     with open(input_file, 'r', encoding='utf-8') as infile:
         lines = infile.readlines()
 
-    # 过滤掉以 "--" 或 "-m" 开头的行
-    filtered_lines = [line for line in lines if not (line.strip().startswith('--') or line.strip().startswith('-m'))]
+    # 过滤掉以 "--" 或 "-m" 或 "M-" 开头的行
+    filtered_lines = [line for line in lines if not (line.strip().startswith('--') or 
+                                                     line.strip().startswith('-m') or 
+                                                     line.strip().startswith('M-'))]
 
     # 计算删除的行数
     removed_lines_count = len(lines) - len(filtered_lines)
