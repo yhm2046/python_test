@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import time
+from datetime import datetime
 
 def sanitize_filename(filename):
     # 替换不合法字符
@@ -62,15 +63,18 @@ def extract_filename(title, text):
     # 提取标题中的目标部分
     if "裏女優に首ったけseason.2" in title:
         part = title.split("裏女優に首ったけseason.2")[1]
-        # 提取“櫻木梨乃＝真名瀬りか＝結城奈菜”部分
-        name_part = part.split('＝')[0:3]  # 取前三个等号前的部分
+        # 提取“真白愛梨＝眞白愛梨＝園田ありさ＝あかね志帆”部分
+        name_part = part.split('＝')[0:4]  # 取前四个等号前的部分
         base_name = sanitize_filename('＝'.join(name_part).strip())  # 返回拼接后的部分
         
         # 使用正则表达式检查文本中是否包含“は”后跟年份和日期
         match = re.search(r'は(\d{4})年(\d{1,2})月(\d{1,2})日生まれ', text)
         if match:
             year = match.group(1)  # 提取年份
-            return sanitize_filename(f"{year}-{base_name}")  # 返回带有年份前缀的文件名
+            birth_date = f"{year}.{match.group(2).zfill(2)}.{match.group(3).zfill(2)}"  # 格式化为 YYYY.MM.DD
+            current_year = datetime.now().year
+            age = current_year - int(year)  # 计算年龄
+            return sanitize_filename(f"{birth_date}-{age}y-{base_name}")  # 返回带有出生日期和年龄的文件名
         return base_name  # 返回原始文件名
     return "webpage"  # 默认文件名
 
