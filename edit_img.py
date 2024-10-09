@@ -1,5 +1,5 @@
-from PIL import Image
 import os
+from PIL import Image
 
 def concatenate_images_horizontal(image1_path, image2_path, output_path):
     """左右拼接图片"""
@@ -51,13 +51,27 @@ def concatenate_images_vertical(image1_path, image2_path, output_path):
     new_image.save(output_path)
     print(f"上下拼接后的图片已保存为: {output_path}")
 
-if __name__ == "__main__":
-    # 设置图片路径
-    image1_path = input("请输入第一张图片的路径: ")  # 第一张图片
-    image2_path = input("请输入第二张图片的路径: ")  # 第二张图片
-    output_horizontal_path = "output_horizontal.jpg"  # 输出左右拼接后图片的路径
-    output_vertical_path = "output_vertical.jpg"  # 输出上下拼接后图片的路径
+def process_folders(base_path):
+    """遍历指定路径下的所有文件夹并合并图片"""
+    for root, dirs, files in os.walk(base_path):
+        # 过滤出图片文件（假设为 jpg 和 png 格式）
+        image_files = [f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+        
+        # 确保至少有两张图片进行拼接
+        if len(image_files) >= 2:
+            # 取前两张图片进行拼接
+            image1_path = os.path.join(root, image_files[0])
+            image2_path = os.path.join(root, image_files[1])
 
-    # 调用拼接函数
-    concatenate_images_horizontal(image1_path, image2_path, output_horizontal_path)
-    concatenate_images_vertical(image1_path, image2_path, output_vertical_path)
+            # 定义输出路径
+            output_horizontal_path = os.path.join(root, "output_horizontal.jpg")
+            output_vertical_path = os.path.join(root, "output_vertical.jpg")
+
+            # 调用拼接函数
+            concatenate_images_horizontal(image1_path, image2_path, output_horizontal_path)
+            concatenate_images_vertical(image1_path, image2_path, output_vertical_path)
+
+if __name__ == "__main__":
+    # 设置图片根路径
+    base_path = input("请输入包含多个文件夹的路径: ")  # 输入路径
+    process_folders(base_path)
