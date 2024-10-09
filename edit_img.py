@@ -1,4 +1,5 @@
 from PIL import Image
+import os
 
 def concatenate_images_horizontal(image1_path, image2_path, output_path):
     """左右拼接图片"""
@@ -52,8 +53,8 @@ def concatenate_images_vertical(image1_path, image2_path, output_path):
 
 if __name__ == "__main__":
     # 设置图片路径
-    image1_path = "1.jpg"  # 第一张图片
-    image2_path = "2.jpg"  # 第二张图片
+    image1_path = input("请输入第一张图片的路径: ")  # 第一张图片
+    image2_path = input("请输入第二张图片的路径: ")  # 第二张图片
     output_horizontal_path = "output_horizontal.jpg"  # 输出左右拼接后图片的路径
     output_vertical_path = "output_vertical.jpg"  # 输出上下拼接后图片的路径
 
