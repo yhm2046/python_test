@@ -6,7 +6,7 @@ import time
 from threading import Thread
 import logging
 
-# 设置日志
+# Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def display_progress(download_cmd):
@@ -17,100 +17,111 @@ def display_progress(download_cmd):
         if match:
             progress, size, unit, speed, speed_unit, eta = match.groups()
             if last_progress != progress:
-                logging.info(f"下载进度: {progress}% of {size}{unit}, 速度: {speed}{speed_unit}/s, ETA: {eta}")
+                logging.info(f"Download progress: {progress}% of {size}{unit}, Speed: {speed}{speed_unit}/s, ETA: {eta}")
                 last_progress = progress
         else:
             print(line.strip())
     process.stdout.close()
     process.wait()
 
-def download_and_merge_video():
+def download_video_or_audio():
     start_time = time.time()
     video_count = 0
 
     while True:
-        url = input("请输入YouTube视频的URL (或按Enter退出): ")
+        url = input("Please enter the YouTube video URL (or press Enter to exit): ")
         if not url:
-            print("程序退出。")
+            print("Program exiting.")
             break
 
         try:
-            # 清理下载记录
+            # Clear download record
             if os.path.exists("archive.txt"):
                 os.remove("archive.txt")
 
-            # 清理可能已存在的临时文件
+            # Clear any existing temporary files
             for file in os.listdir():
                 if (file.endswith(('.part', '.ytdl')) or 
-                    (file.endswith(('.webm', '.mp4', '.mkv')) and not file.startswith('Titanic • My Heart Will Go On • Celine Dion [F2RnxZnubCM]'))) and not file.endswith('.py'):
+                    (file.endswith(('.webm', '.mp4', '.mkv', '.mp3')) and not file.startswith('Titanic • My Heart Will Go On • Celine Dion [F2RnxZnubCM]'))) and not file.endswith('.py'):
                     os.remove(file)
 
-            # 下载视频和音频流，获取详细输出
-            download_cmd = f"yt-dlp -v -f bestvideo+bestaudio --no-playlist --download-archive archive.txt {url}"
+            # Ask user if they want MP4 or MP3
+            choice = input("Do you want to download MP4 (video) or MP3 (audio)? (1 for MP4, 2 for MP3): ")
+            if choice == '1':
+                download_cmd = f"yt-dlp -v -f bestvideo+bestaudio --no-playlist --download-archive archive.txt {url}"
+                logging.info("Downloading as MP4.")
+                file_extension = '.mp4'
+            elif choice == '2':
+                download_cmd = f"yt-dlp -v -f bestaudio --extract-audio --audio-format mp3 --no-playlist --download-archive archive.txt {url}"
+                logging.info("Downloading as MP3.")
+                file_extension = '.mp3'
+            else:
+                print("Invalid choice. Please choose '1' for MP4 or '2' for MP3.")
+                continue
+
             thread = Thread(target=display_progress, args=(download_cmd,))
             thread.start()
 
-            # 等待下载完成
+            # Wait for download to complete
             thread.join()
 
-            # 从yt-dlp的输出中提取视频标题
+            # Extract video title from yt-dlp output
             result = subprocess.run(download_cmd, shell=True, capture_output=True, text=True)
             title_match = re.search(r'Destination: (.*?)\.', result.stdout, re.DOTALL)
             if title_match:
                 video_title = title_match.group(1)
             else:
-                # 尝试从文件名中获取
-                downloaded_files = [f for f in os.listdir() if f.endswith(('.webm', '.mp4', '.mkv'))]
+                # Try to get from filename
+                downloaded_files = [f for f in os.listdir() if f.endswith(file_extension)]
                 if downloaded_files:
-                    video_title = os.path.splitext(downloaded_files[0])[0]
+                    # Strip any extra identifiers like [BV1Te4y1M7fd] from the title
+                    video_title = re.sub(r'\s*\[.*?\]', '', os.path.splitext(downloaded_files[0])[0])
                 else:
-                    print("无法从yt-dlp输出中提取视频标题，也没有找到下载的文件。")
+                    print(f"Could not extract video title from yt-dlp output, nor find a downloaded {file_extension} file.")
                     continue
 
-            # 假设yt-dlp会创建一个文件，可能是合并后的视频文件
-            merged_file = next((f for f in os.listdir() if f.startswith(video_title) and f.endswith(('.webm', '.mp4', '.mkv'))), None)
+            # Assume yt-dlp creates the file with the correct extension
+            merged_file = next((f for f in os.listdir() if f.startswith(video_title) and f.endswith(file_extension)), None)
 
             if merged_file:
-                # 提取原始文件扩展名并重命名
-                original_extension = os.path.splitext(merged_file)[1]
-                output_filename = f"{video_title}.mp4" if original_extension.lower() != '.mp4' else merged_file
-                if original_extension.lower() != '.mp4':
-                    os.rename(merged_file, output_filename)
-                logging.info(f"\n视频已经成功下载并命名为 {output_filename}")
-                video_count += 1  # 增加下载视频的计数
+                # Rename to match the format "xxx.mp4" or "xxx.mp3"
+                new_filename = f"{video_title}{file_extension}"
+                os.rename(merged_file, new_filename)
+                logging.info(f"\nFile has been successfully downloaded and renamed to {new_filename}")
+                video_count += 1  # Increment download count
 
-                # 删除下载记录文件和临时文件
+                # Delete download record file and temporary files
                 if os.path.exists("archive.txt"):
                     os.remove("archive.txt")
-                logging.info("下载记录文件已清理。")
+                logging.info("Download record file has been cleared.")
                 
-                # 清理所有可能的临时文件，但不删除目标文件
+                # Clear all possible temporary files, but not the target file
                 for file in os.listdir():
                     if (file.endswith(('.part', '.ytdl')) or 
-                        (file.endswith(('.webm', '.mp4', '.mkv')) and file != output_filename)) and not file.endswith('.py'):
+                        (file.endswith(('.webm', '.mp4', '.mkv', '.mp3')) and file != new_filename)) and not file.endswith('.py'):
                         os.remove(file)
-                logging.info("临时文件已清理。")
+                logging.info("Temporary files have been cleared.")
 
-                if input("是否继续下载其他视频？(Y/n): ").lower() == 'n':
+                if input("Do you want to continue downloading other videos? (Y/n): ").lower() == 'n':
                     break
             else:
-                print("无法找到下载的视频文件。")
+                print(f"Could not find the downloaded {file_extension} file.")
         except subprocess.CalledProcessError as e:
-            print(f"yt-dlp命令执行错误:\n{e.output}")
+            print(f"yt-dlp command execution error:\n{e.output}")
         except OSError as e:
-            print(f"操作系统错误: {e}")
+            print(f"OS error: {e}")
         except Exception as e:
-            print(f"发生了一个意外的错误: {e}")
+            print(f"An unexpected error occurred: {e}")
 
-    # 计算总共运行时间
+    # Calculate total runtime
     end_time = time.time()
     total_time = int(end_time - start_time)
     minutes, seconds = divmod(total_time, 60)
-    logging.info(f"\n程序运行总共耗时 {minutes:02d}分{seconds:02d}秒,共下载了{video_count}个视频文件")
+    logging.info(f"\nProgram ran for a total of {minutes:02d} minutes {seconds:02d} seconds, downloaded {video_count} files")
 
-    # 程序结束时直接删除archive.txt文件
+    # Delete archive.txt file at program end
     if os.path.exists("archive.txt"):
         os.remove("archive.txt")
 
 if __name__ == "__main__":
-    download_and_merge_video()
+    download_video_or_audio()
