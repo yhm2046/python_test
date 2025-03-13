@@ -27,26 +27,14 @@ def rename_files_in_path(path):
         if "坂井泉水 161首单曲合集「1080P」" in new_name:
             new_name = new_name.replace("坂井泉水 161首单曲合集「1080P」", "")
 
-        # New Rule: Remove "pXX" or "X XXX." patterns (e.g., "p01", "0 110.")
+        # Rule 3: Remove "pXX" or "X XXX." patterns (e.g., "p01", "0 110.")
         # Match "pXX" or standalone numbers like "0 110" followed by optional dot and spaces
         new_name = re.sub(r'(p\d{2}|\d+\s+\d{3})\.?\s*', '', new_name)
 
-        # Rule 3: Handle "ZARD" conditions
-        if "ZARD" in new_name:
-            # Split the name at "ZARD"
-            parts = new_name.split("ZARD", 1)  # Split only at first occurrence
-            prefix = parts[0]  # Before "ZARD"
-            suffix = parts[1]  # After "ZARD"
-            
-            # If "ZARD" is at the end, add "-"
-            if not suffix:
-                new_name = "ZARD-"
-            # If "ZARD" is followed by something but not "-", insert "-"
-            elif not suffix.startswith("-"):
-                new_name = "ZARD-" + suffix
-        else:
-            # If "ZARD" is not present, add "ZARD-" at the start
-            new_name = "ZARD-" + new_name
+        
+
+        # New Rule: Add "2002 -" at the beginning of the new name
+        new_name = "2024 -" + new_name
 
         # If the name changed, attempt to rename
         if new_name != old_name:
