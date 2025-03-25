@@ -32,9 +32,15 @@ def find_ffmpeg():
     return None
 
 def download_media(url, format_choice, download_playlist=False, max_retries=3):
+    # 確保 download 文件夾存在
+    download_dir = "download"
+    if not os.path.exists(download_dir):
+        os.makedirs(download_dir)
+
     ydl_opts = {
         'format': 'bestaudio/best' if format_choice == '2' else 'bestvideo+bestaudio/best',
-        'outtmpl': '%(playlist)s/%(playlist_index)s - %(title)s.%(ext)s',
+        # 修改保存路徑和文件名格式：保存到 download 文件夾，文件名為 <標題>.<擴展名>
+        'outtmpl': os.path.join(download_dir, '%(title)s.%(ext)s'),
         'extract_flat': 'in_playlist' if download_playlist else False,
         'playlistend': -1 if download_playlist else 1,  # Download all items in playlist
         'ignoreerrors': True,  # Ignore errors and continue with next video
@@ -104,5 +110,5 @@ def main():
     print(f"媒體下載完成！總耗時: {hours}小時 {minutes}分鐘 {seconds}秒")
 
 if __name__ == "__main__":
-    main() 
-   # input("按任意鍵退出...")
+    main()
+    # input("按任意鍵退出...")
