@@ -32,13 +32,20 @@ def find_ffmpeg():
     return None
 
 def download_media(url, format_choice, download_playlist=False, max_retries=3):
+    # 確保 download 文件夾存在
+    download_dir = "download"
+    if not os.path.exists(download_dir):
+        os.makedirs(download_dir)
+
     ydl_opts = {
         'format': 'bestaudio/best' if format_choice == '2' else 'bestvideo+bestaudio/best',
-        'outtmpl': '%(title)s.%(ext)s',
+        # 修改保存路徑和文件名格式：保存到 download 文件夾，文件名為 <標題>.<擴展名>
+        'outtmpl': os.path.join(download_dir, '%(title)s.%(ext)s'),
+        'extract_flat': 'in_playlist' if download_playlist else False,
+        'playlistend': -1 if download_playlist else 1,  # Download all items in playlist
+        'ignoreerrors': True,  # Ignore errors and continue with next video
+        'verbose': True,  # More detailed output for debugging
     }
-
-    if not download_playlist:
-        ydl_opts['noplaylist'] = True
 
     ffmpeg_path = find_ffmpeg()
     if ffmpeg_path:
@@ -54,10 +61,18 @@ def download_media(url, format_choice, download_playlist=False, max_retries=3):
         print("警告: 未找到 FFmpeg。將下載原始格式，無法進行格式轉換。")
         print("您可以從 https://ffmpeg.org/download.html 下載 FFmpeg 以啟用格式轉換功能。")
 
+    # Strip the page number from the URL if present
+    url = url.split('&p=')[0] if '&p=' in url else url
+
     for attempt in range(max_retries):
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
+                info = ydl.extract_info(url, download=False)
+                if 'entries' in info and download_playlist:
+                    urls = [entry.get('webpage_url', entry.get('url')) for entry in info['entries'] if entry]
+                    ydl.download(urls)
+                else:
+                    ydl.download([url])
             print("下載成功完成！")
             return
         except Exception as e:
@@ -70,6 +85,7 @@ def download_media(url, format_choice, download_playlist=False, max_retries=3):
                 print("請檢查您的網絡連接，或稍後再試。")
                 print("如果問題持續存在，請考慮更新 yt-dlp:")
                 print("pip install --upgrade yt-dlp")
+                raise  # Re-raise the last exception for debugging
 
 def main():
     video_url = input("請輸入要下載的視頻URL: ")
@@ -79,7 +95,10 @@ def main():
     start_time = datetime.now()
     print(f"開始下載時間: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    download_media(video_url, format_choice, download_playlist)
+    try:
+        download_media(video_url, format_choice, download_playlist)
+    except Exception as e:
+        print(f"最終錯誤: {str(e)}")
 
     end_time = datetime.now()
     print(f"下載完成時間: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -92,4 +111,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    input("按任意鍵退出...")
+    # input("按任意鍵退出...")
