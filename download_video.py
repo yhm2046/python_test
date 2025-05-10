@@ -4,14 +4,29 @@ import os
 import sys
 import subprocess
 import time
+import re
+
+def sanitize_url(url):
+    """Clean the URL by removing non-printable characters and ANSI escape codes"""
+    # Remove ANSI escape codes (e.g., \x1b[A, \x1b[B)
+    url = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', url)
+    # Remove other non-printable characters
+    url = ''.join(c for c in url if c.isprintable())
+    # Strip whitespace
+    url = url.strip()
+    return url
+
+def validate_url(url):
+    """Validate that the URL is a proper HTTP/HTTPS URL"""
+    return url.startswith(('http://', 'https://'))
 
 def find_ffmpeg():
-    """嘗試多種方法找到 FFmpeg"""
-    # 1. 檢查當前目錄
+    """Try multiple methods to find FFmpeg"""
+    # 1. Check current directory
     if os.path.exists('ffmpeg.exe'):
         return os.path.abspath('ffmpeg.exe')
     
-    # 2. 檢查 PATH
+    # 2. Check PATH
     try:
         result = subprocess.run(['where', 'ffmpeg'], capture_output=True, text=True)
         if result.returncode == 0:
@@ -19,7 +34,7 @@ def find_ffmpeg():
     except:
         pass
     
-    # 3. 檢查常見安裝位置
+    # 3. Check common installation locations
     common_paths = [
         r'C:\ffmpeg\bin\ffmpeg.exe',
         r'D:\ffmpeg\bin\ffmpeg.exe',
@@ -32,14 +47,20 @@ def find_ffmpeg():
     return None
 
 def download_media(url, format_choice, download_playlist=False, max_retries=3):
-    # 確保 download 文件夾存在
+    # Ensure download folder exists
     download_dir = "download"
     if not os.path.exists(download_dir):
         os.makedirs(download_dir)
 
+    # Sanitize and validate the URL
+    url = sanitize_url(url)
+    if not validate_url(url):
+        print(f"Error: '{url}' is not a valid HTTP/HTTPS URL. Please provide a valid URL starting with http:// or https://.")
+        return
+
     ydl_opts = {
         'format': 'bestaudio/best' if format_choice == '2' else 'bestvideo+bestaudio/best',
-        # 修改保存路徑和文件名格式：保存到 download 文件夾，文件名為 <標題>.<擴展名>
+        # Modify save path and filename format: save to download folder, filename as <title>.<ext>
         'outtmpl': os.path.join(download_dir, '%(title)s.%(ext)s'),
         'extract_flat': 'in_playlist' if download_playlist else False,
         'playlistend': -1 if download_playlist else 1,  # Download all items in playlist
@@ -49,7 +70,7 @@ def download_media(url, format_choice, download_playlist=False, max_retries=3):
 
     ffmpeg_path = find_ffmpeg()
     if ffmpeg_path:
-        print(f"找到 FFmpeg: {ffmpeg_path}")
+        print(f"Found FFmpeg: {ffmpeg_path}")
         ydl_opts['ffmpeg_location'] = ffmpeg_path
         if format_choice == '2':  # MP3
             ydl_opts['postprocessors'] = [{
@@ -58,8 +79,8 @@ def download_media(url, format_choice, download_playlist=False, max_retries=3):
                 'preferredquality': '192',
             }]
     else:
-        print("警告: 未找到 FFmpeg。將下載原始格式，無法進行格式轉換。")
-        print("您可以從 https://ffmpeg.org/download.html 下載 FFmpeg 以啟用格式轉換功能。")
+        print("Warning: FFmpeg not found. Will download in original format, unable to perform format conversion.")
+        print("You can download FFmpeg from https://ffmpeg.org/download.html to enable format conversion.")
 
     # Strip the page number from the URL if present
     url = url.split('&p=')[0] if '&p=' in url else url
@@ -73,42 +94,42 @@ def download_media(url, format_choice, download_playlist=False, max_retries=3):
                     ydl.download(urls)
                 else:
                     ydl.download([url])
-            print("下載成功完成！")
+            print("Download completed successfully!")
             return
         except Exception as e:
-            print(f"下載嘗試 {attempt + 1}/{max_retries} 失敗: {str(e)}")
+            print(f"Download attempt {attempt + 1}/{max_retries} failed: {str(e)}")
             if attempt < max_retries - 1:
-                print("等待 5 秒後重試...")
+                print("Retrying after 5 seconds...")
                 time.sleep(5)
             else:
-                print("達到最大重試次數，下載失敗。")
-                print("請檢查您的網絡連接，或稍後再試。")
-                print("如果問題持續存在，請考慮更新 yt-dlp:")
+                print("Maximum retry attempts reached, download failed.")
+                print("Please check your network connection or try again later.")
+                print("If the issue persists, consider updating yt-dlp:")
                 print("pip install --upgrade yt-dlp")
                 raise  # Re-raise the last exception for debugging
 
 def main():
-    video_url = input("請輸入要下載的視頻URL: ")
-    format_choice = input("請選擇下載格式 (1: 視頻, 2: 音頻): ")
-    download_playlist = input("是否下載整個播放列表？(y/n): ").lower() == 'y'
+    video_url = input("Please enter the video URL to download: ")
+    format_choice = input("Please choose download format (1: Video, 2: Audio): ")
+    download_playlist = input("Download the entire playlist? (y/n): ").lower() == 'y'
 
     start_time = datetime.now()
-    print(f"開始下載時間: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Download start time: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
     try:
         download_media(video_url, format_choice, download_playlist)
     except Exception as e:
-        print(f"最終錯誤: {str(e)}")
+        print(f"Final error: {str(e)}")
 
     end_time = datetime.now()
-    print(f"下載完成時間: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Download completion time: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
     duration = end_time - start_time
     hours, remainder = divmod(duration.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
-    print(f"媒體下載完成！總耗時: {hours}小時 {minutes}分鐘 {seconds}秒")
+    print(f"Media download completed! Total time: {hours} hours {minutes} minutes {seconds} seconds")
 
 if __name__ == "__main__":
     main()
-    # input("按任意鍵退出...")
+    # input("Press any key to exit...")
